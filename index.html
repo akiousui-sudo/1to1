@@ -321,13 +321,22 @@ function daysSince(dateStr){
 function fmtDate(d){ return d ? d.replace(/-/g,"/") : ""; }
 
 /* ============ フォーム生成 ============ */
+let formDirty = false;
 function openModal(html){
   $("modalContent").innerHTML = html;
   $("modalBack").classList.add("show");
+  formDirty = false;
 }
-function closeModal(){ $("modalBack").classList.remove("show"); }
-$("modalClose").onclick = closeModal;
+function closeModal(force){
+  if (formDirty && force !== true && !confirm("入力中の内容は保存されていません。閉じてもよろしいですか？")) return;
+  $("modalBack").classList.remove("show");
+  formDirty = false;
+}
+$("modalContent").addEventListener("input", () => { formDirty = true; });
+$("modalContent").addEventListener("change", () => { formDirty = true; });
+$("modalClose").onclick = () => closeModal();
 $("modalBack").addEventListener("click", e => { if (e.target === $("modalBack")) closeModal(); });
+window.addEventListener("beforeunload", e => { if (formDirty) e.preventDefault(); });
 
 function fieldInput(f, val){
   const v = esc(val);
@@ -369,10 +378,10 @@ function openForm(title, fields, data, colName, id, afterSave){
   html += `<button class="btn sub" id="formCancel">キャンセル</button><button class="btn" id="formSave">保存</button></div>`;
   openModal(html);
 
-  $("formCancel").onclick = closeModal;
+  $("formCancel").onclick = () => closeModal();
   if (id) $("formDelete").onclick = async () => {
     if (!confirm("削除してよろしいですか？")) return;
-    await remove(colName, id); closeModal(); toast("削除しました");
+    await remove(colName, id); closeModal(true); toast("削除しました");
   };
   $("formSave").onclick = async () => {
     const out = {};
@@ -388,7 +397,7 @@ function openForm(title, fields, data, colName, id, afterSave){
     }
     try {
       const newId = await save(colName, out, id);
-      closeModal(); toast("保存しました");
+      closeModal(true); toast("保存しました");
       if (afterSave) afterSave(newId, out);
     } catch(e){ toast("保存エラー: " + e.message); }
   };
