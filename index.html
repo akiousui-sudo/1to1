@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>1to1ノート</title>
+<style>
+  :root{
+    --primary:#8b1d2c; --primary-dark:#6e1522; --accent:#c9a227;
+    --bg:#f6f4f1; --card:#ffffff; --text:#2b2b2b; --sub:#777;
+    --border:#e3ded7; --danger:#c0392b; --ok:#2e7d32; --warn:#e67e22;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Hiragino Sans","Yu Gothic",Meiryo,sans-serif; background:var(--bg); color:var(--text); font-size:15px;}
+  header{background:var(--primary); color:#fff; padding:10px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:50;}
+  header h1{font-size:18px; flex:1;}
+  header .user{font-size:12px; opacity:.9;}
+  header button{background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.4); color:#fff; border-radius:6px; padding:5px 10px; cursor:pointer; font-size:12px;}
+  nav{display:flex; background:var(--primary-dark); position:sticky; top:44px; z-index:49; overflow-x:auto;}
+  nav button{flex:1; min-width:80px; background:none; border:none; color:rgba(255,255,255,.75); padding:10px 6px; font-size:13px; cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent;}
+  nav button.active{color:#fff; border-bottom-color:var(--accent); font-weight:bold;}
+  main{max-width:900px; margin:0 auto; padding:14px;}
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;}
+  .toolbar input[type=text], .toolbar select{padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; background:#fff;}
+  .toolbar input[type=text]{flex:1; min-width:160px;}
+  .btn{background:var(--primary); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer;}
+  .btn.sub{background:#fff; color:var(--primary); border:1px solid var(--primary);}
+  .btn.small{padding:5px 10px; font-size:12px;}
+  .btn.danger{background:#fff; color:var(--danger); border:1px solid var(--danger);}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.04);}
+  .card:hover{border-color:var(--primary);}
+  .card .name{font-size:16px; font-weight:bold;}
+  .card .sub{color:var(--sub); font-size:12px; margin-top:2px;}
+  .card .want{margin-top:6px; font-size:13px; background:#fdf6e3; border-left:3px solid var(--accent); padding:4px 8px; border-radius:0 6px 6px 0;}
+  .chips{margin-top:6px; display:flex; gap:5px; flex-wrap:wrap;}
+  .chip{font-size:11px; background:#f0e9e0; color:#6e5a2e; border-radius:20px; padding:2px 9px;}
+  .chip.comm{background:#e8eef7; color:#2c4a75;}
+  .chip.region{background:#e7f3e8; color:#2e6b33;}
+  .badge{font-size:11px; border-radius:6px; padding:2px 7px; color:#fff;}
+  .badge.warn{background:var(--warn);}
+  .badge.new{background:var(--sub);}
+  .meta{display:flex; gap:10px; align-items:center; margin-top:6px; font-size:12px; color:var(--sub); flex-wrap:wrap;}
+  .empty{text-align:center; color:var(--sub); padding:40px 10px; font-size:14px;}
+  /* modal */
+  #modalBack{position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; display:none; overflow-y:auto; padding:20px 10px;}
+  #modalBack.show{display:block;}
+  #modalBox{background:#fff; border-radius:14px; max-width:640px; margin:0 auto; padding:18px; position:relative;}
+  #modalBox h2{font-size:17px; color:var(--primary); margin-bottom:12px; padding-right:30px;}
+  #modalClose{position:absolute; top:12px; right:14px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--sub);}
+  .fsec{font-size:13px; font-weight:bold; color:var(--primary); border-bottom:2px solid var(--border); padding-bottom:4px; margin:16px 0 8px;}
+  .frow{margin-bottom:10px;}
+  .frow label{display:block; font-size:12px; color:var(--sub); margin-bottom:3px;}
+  .frow input[type=text], .frow input[type=date], .frow input[type=time], .frow input[type=number], .frow select, .frow textarea{
+    width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit;}
+  .frow textarea{min-height:64px; resize:vertical;}
+  .frow .req{color:var(--danger);}
+  .checkgroup{display:flex; flex-wrap:wrap; gap:6px;}
+  .checkgroup label{display:flex; align-items:center; gap:4px; font-size:13px; color:var(--text); background:#f4f1ec; border-radius:8px; padding:6px 10px; cursor:pointer; margin:0;}
+  .formBtns{display:flex; gap:8px; margin-top:16px; justify-content:flex-end;}
+  /* detail view */
+  .dl{margin-bottom:8px;}
+  .dl dt{font-size:11px; color:var(--sub);}
+  .dl dd{font-size:14px; white-space:pre-wrap; margin-left:0;}
+  .subcard{background:#faf8f5; border:1px solid var(--border); border-radius:10px; padding:8px 10px; margin-bottom:8px; cursor:pointer; font-size:13px;}
+  .subcard .h{font-weight:bold; font-size:13px;}
+  /* login */
+  #loginView{max-width:400px; margin:70px auto; text-align:center; padding:20px;}
+  #loginView .logo{font-size:40px;}
+  #loginView h2{color:var(--primary); margin:10px 0 6px;}
+  #loginView p{color:var(--sub); font-size:13px; margin-bottom:22px;}
+  #toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:10px 18px; border-radius:24px; font-size:13px; z-index:200; display:none; max-width:90%;}
+  @media (max-width:600px){ main{padding:10px;} nav{top:42px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🤝 1to1ノート</h1>
+  <span class="user" id="userLabel"></span>
+  <button id="exportBtn" style="display:none">保存(JSON)</button>
+  <button id="logoutBtn" style="display:none">ログアウト</button>
+</header>
+
+<nav id="tabs" style="display:none">
+  <button data-tab="people" class="active">👥 メンバー</button>
+  <button data-tab="meetings">🤝 1to1記録</button>
+  <button data-tab="referrals">🎁 リファーラル</button>
+  <button data-tab="communities">🏛️ 交流会</button>
+</nav>
+
+<div id="loginView">
+  <div class="logo">🤝</div>
+  <h2>1to1ノート</h2>
+  <p>BNI・交流会で出会った方との1to1の記録を蓄積・検索できるデータベースです。<br>名刺アプリと同じGoogleアカウントでログインしてください。</p>
+  <button class="btn" id="loginBtn">Googleでログイン</button>
+</div>
+
+<main id="appView" style="display:none">
+  <section id="view-people">
+    <div class="toolbar">
+      <input type="text" id="q" placeholder="🔍 名前・会社・欲しい紹介・議事録などを横断検索">
+    </div>
+    <div class="toolbar">
+      <select id="fIndustry"><option value="">業種：すべて</option></select>
+      <select id="fCommunity"><option value="">交流会：すべて</option></select>
+      <select id="fSort">
+        <option value="kana">並び：五十音</option>
+        <option value="recent">並び：1to1が新しい順</option>
+        <option value="old">並び：1to1が古い順（疎遠）</option>
+      </select>
+      <button class="btn" id="addPersonBtn">＋ メンバー追加</button>
+    </div>
+    <div id="peopleList"></div>
+  </section>
+
+  <section id="view-meetings" style="display:none">
+    <div class="toolbar">
+      <input type="text" id="qMeet" placeholder="🔍 議事録・場所などを検索">
+      <button class="btn" id="addMeetingBtn">＋ 1to1を記録</button>
+    </div>
+    <div id="meetingList"></div>
+  </section>
+
+  <section id="view-referrals" style="display:none">
+    <div class="toolbar">
+      <select id="fRefDir"><option value="">すべて</option><option>出した</option><option>もらった</option></select>
+      <select id="fRefStatus"><option value="">状況：すべて</option><option>紹介済</option><option>商談中</option><option>成約</option><option>不成立</option></select>
+      <button class="btn" id="addReferralBtn">＋ リファーラル記録</button>
+    </div>
+    <div id="referralList"></div>
+  </section>
+
+  <section id="view-communities" style="display:none">
+    <div class="toolbar">
+      <span style="font-size:13px;color:var(--sub);flex:1">BNIチャプターや他の交流会を登録しておくと、メンバー登録時に選べます。</span>
+      <button class="btn" id="addCommunityBtn">＋ 交流会を追加</button>
+    </div>
+    <div id="communityList"></div>
+  </section>
+</main>
+
+<div id="modalBack">
+  <div id="modalBox">
+    <button id="modalClose">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<datalist id="industryList"></datalist>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ============ Firebase（名刺アプリと同じプロジェクトを使用） ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCQjVYZw1WhkYzZMl96OQUr8_takJraDe8",
+  authDomain: "meishi-ea604.firebaseapp.com",
+  projectId: "meishi-ea604",
+  storageBucket: "meishi-ea604.firebasestorage.app",
+  messagingSenderId: "1070164754045",
+  appId: "1:1070164754045:web:f26448add94f82c8277b14"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ============ 項目定義（ここに1行足せば入力項目を追加できます） ============ */
+const INDUSTRIES = ["建設・不動産","士業","金融・保険","IT・Web","製造","卸・小売","飲食","美容・健康","医療・福祉","教育","広告・印刷・デザイン","冠婚葬祭","運輸・物流","旅行・レジャー","コンサルティング","その他"];
+
+const PERSON_FIELDS = [
+  {sec:"基本情報"},
+  {k:"name",  label:"氏名", req:true},
+  {k:"kana",  label:"ふりがな"},
+  {k:"company", label:"会社名・屋号"},
+  {k:"title", label:"役職"},
+  {k:"industry", label:"業種（大分類）", type:"datalist", ph:"選択または入力"},
+  {k:"category", label:"BNIカテゴリー", ph:"例：リフォーム、行政書士"},
+  {k:"region", label:"活動地域", ph:"例：新潟県全域、東京23区"},
+  {sec:"連絡先"},
+  {k:"tel", label:"電話"},
+  {k:"mail", label:"メール"},
+  {k:"line", label:"LINE"},
+  {k:"sns", label:"SNS"},
+  {k:"web", label:"ホームページ"},
+  {sec:"つながり"},
+  {k:"communityIds", label:"所属コミュニティ（交流会タブで登録したものから選択）", type:"communities"},
+  {k:"introducer", label:"紹介者・知り合った経緯", ph:"例：樽見さんの紹介／ビジターデーで名刺交換"},
+  {k:"meishiUrl", label:"名刺画像リンク", ph:"名刺アプリ等のURL"},
+  {sec:"ビジネス情報"},
+  {k:"bizDetail", label:"事業内容の詳細", type:"textarea"},
+  {k:"usp", label:"強み・USP（他社との違い）", type:"textarea"},
+  {k:"target", label:"ターゲット顧客", type:"textarea"},
+  {k:"wantedReferral", label:"★ 欲しい紹介（どんな人を紹介してほしいか）", type:"textarea", ph:"例：築20年以上の戸建てにお住まいの方"},
+  {k:"canProvide", label:"提供できるもの", type:"textarea"},
+  {k:"areaPrice", label:"商圏・単価帯"},
+  {k:"cases", label:"実績・事例", type:"textarea"},
+  {sec:"その他"},
+  {k:"personalMemo", label:"パーソナルメモ（趣味・家族・出身地・誕生日など）", type:"textarea"},
+  {k:"tags", label:"タグ（カンマ区切り）", ph:"例：ゴルフ,同年代"}
+];
+
+const COMMUNITY_FIELDS = [
+  {k:"name", label:"名称", req:true, ph:"例：BNI BeBeeチャプター、○○異業種交流会"},
+  {k:"type", label:"種別", type:"select", options:["BNI","その他の交流会"]},
+  {k:"region", label:"リージョン（BNIの場合）", ph:"例：東京MSリージョン"},
+  {k:"area", label:"チャプター・会の所在地域", ph:"例：東京都中央区"},
+  {k:"memo", label:"メモ", type:"textarea"}
+];
+
+const MEETING_FIELDS = [
+  {k:"personId", label:"相手", type:"person", req:true},
+  {k:"date", label:"日付", type:"date", req:true},
+  {k:"time", label:"開始時間", type:"time"},
+  {k:"format", label:"形式", type:"select", options:["対面","ZOOM","電話","その他"]},
+  {k:"place", label:"場所", ph:"店名・住所（ZOOMの場合は空欄でOK）"},
+  {k:"content", label:"話した内容・議事録", type:"textarea", rows:8},
+  {k:"transcriptUrl", label:"録画・録音・文字起こしのリンク", ph:"Google Drive等のURL"},
+  {k:"actions", label:"約束したこと・次のアクション", type:"textarea", ph:"例：○○さんを紹介する（7/20まで）"},
+  {k:"nextDate", label:"次回1to1の予定", type:"date"}
+];
+
+const REFERRAL_FIELDS = [
+  {k:"direction", label:"方向", type:"select", options:["出した","もらった"], req:true},
+  {k:"personId", label:"相手（BNI等のメンバー）", type:"person", req:true},
+  {k:"counterpart", label:"紹介した人・された人", ph:"例：知人の田中さん（リフォーム希望）"},
+  {k:"date", label:"日付", type:"date"},
+  {k:"content", label:"内容", type:"textarea"},
+  {k:"status", label:"状況", type:"select", options:["紹介済","商談中","成約","不成立"]},
+  {k:"amount", label:"金額（サンキュー・フォー・ザ・ビジネス）", type:"number"},
+  {k:"memo", label:"メモ", type:"textarea"}
+];
+
+/* ============ 状態 ============ */
+let uid = null;
+let state = { people:[], communities:[], meetings:[], referrals:[] };
+let unsubs = [];
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.style.display = "block";
+  clearTimeout(t._tm); t._tm = setTimeout(()=>{ t.style.display="none"; }, 3000);
+}
+
+/* ============ 認証 ============ */
+$("loginBtn").onclick = () => {
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => toast("ログインエラー: " + e.message));
+};
+$("logoutBtn").onclick = () => auth.signOut();
+
+auth.onAuthStateChanged(user => {
+  unsubs.forEach(u=>u()); unsubs = [];
+  if (user) {
+    uid = user.uid;
+    $("loginView").style.display = "none";
+    $("appView").style.display = "block";
+    $("tabs").style.display = "flex";
+    $("logoutBtn").style.display = "inline-block";
+    $("exportBtn").style.display = "inline-block";
+    $("userLabel").textContent = user.displayName || user.email || "";
+    listenAll();
+  } else {
+    uid = null;
+    state = { people:[], communities:[], meetings:[], referrals:[] };
+    $("loginView").style.display = "block";
+    $("appView").style.display = "none";
+    $("tabs").style.display = "none";
+    $("logoutBtn").style.display = "none";
+    $("exportBtn").style.display = "none";
+    $("userLabel").textContent = "";
+  }
+});
+
+function col(name){ return db.collection("users").doc(uid).collection(name); }
+
+function listenAll(){
+  ["people","communities","meetings","referrals"].forEach(name => {
+    const u = col(name).onSnapshot(snap => {
+      state[name] = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
+      renderAll();
+    }, err => {
+      console.error(err);
+      toast("データ読込エラー：Firestoreのルールを確認してください");
+    });
+    unsubs.push(u);
+  });
+}
+
+async function save(name, data, id){
+  data.updatedAt = new Date().toISOString();
+  if (!id) data.createdAt = data.updatedAt;
+  const ref = id ? col(name).doc(id) : col(name).doc();
+  await ref.set(data, {merge:true});
+  return ref.id;
+}
+async function remove(name, id){ await col(name).doc(id).delete(); }
+
+/* ============ タブ ============ */
+let curTab = "people";
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  curTab = b.dataset.tab;
+  document.querySelectorAll("#tabs button").forEach(x => x.classList.toggle("active", x===b));
+  ["people","meetings","referrals","communities"].forEach(t => {
+    $("view-"+t).style.display = (t===curTab) ? "block" : "none";
+  });
+});
+
+/* ============ 共通ヘルパー ============ */
+function personName(id){ const p = state.people.find(x=>x.id===id); return p ? p.name : "（不明）"; }
+function commName(id){ const c = state.communities.find(x=>x.id===id); return c ? c.name : ""; }
+function meetingsOf(pid){ return state.meetings.filter(m=>m.personId===pid).sort((a,b)=>(b.date||"").localeCompare(a.date||"")); }
+function lastMeetingDate(pid){ const ms = meetingsOf(pid); return ms.length ? ms[0].date : ""; }
+function daysSince(dateStr){
+  if (!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+function fmtDate(d){ return d ? d.replace(/-/g,"/") : ""; }
+
+/* ============ フォーム生成 ============ */
+function openModal(html){
+  $("modalContent").innerHTML = html;
+  $("modalBack").classList.add("show");
+}
+function closeModal(){ $("modalBack").classList.remove("show"); }
+$("modalClose").onclick = closeModal;
+$("modalBack").addEventListener("click", e => { if (e.target === $("modalBack")) closeModal(); });
+
+function fieldInput(f, val){
+  const v = esc(val);
+  if (f.type === "textarea")
+    return `<textarea id="fld_${f.k}" placeholder="${esc(f.ph||"")}" ${f.rows?`style="min-height:${f.rows*18}px"`:""}>${v}</textarea>`;
+  if (f.type === "select"){
+    const opts = f.options.map(o => `<option ${o===val?"selected":""}>${esc(o)}</option>`).join("");
+    return `<select id="fld_${f.k}">${opts}</select>`;
+  }
+  if (f.type === "person"){
+    const people = state.people.slice().sort((a,b)=>(a.kana||a.name||"").localeCompare(b.kana||b.name||"","ja"));
+    const opts = people.map(p => `<option value="${p.id}" ${p.id===val?"selected":""}>${esc(p.name)}${p.company?"（"+esc(p.company)+"）":""}</option>`).join("");
+    return `<select id="fld_${f.k}"><option value="">選択してください</option>${opts}</select>`;
+  }
+  if (f.type === "communities"){
+    if (!state.communities.length) return `<div style="font-size:12px;color:var(--sub)">先に「🏛️ 交流会」タブで交流会を登録してください</div>`;
+    const cur = Array.isArray(val) ? val : [];
+    return `<div class="checkgroup">` + state.communities.map(c =>
+      `<label><input type="checkbox" name="fld_${f.k}" value="${c.id}" ${cur.includes(c.id)?"checked":""}>${esc(c.name)}</label>`
+    ).join("") + `</div>`;
+  }
+  if (f.type === "date") return `<input type="date" id="fld_${f.k}" value="${v}">`;
+  if (f.type === "time") return `<input type="time" id="fld_${f.k}" value="${v}">`;
+  if (f.type === "number") return `<input type="number" id="fld_${f.k}" value="${v}" placeholder="${esc(f.ph||"")}">`;
+  if (f.type === "datalist") return `<input type="text" id="fld_${f.k}" value="${v}" list="industryList" placeholder="${esc(f.ph||"")}">`;
+  return `<input type="text" id="fld_${f.k}" value="${v}" placeholder="${esc(f.ph||"")}">`;
+}
+
+let onFormSave = null;
+function openForm(title, fields, data, colName, id, afterSave){
+  data = data || {};
+  let html = `<h2>${esc(title)}</h2>`;
+  fields.forEach(f => {
+    if (f.sec){ html += `<div class="fsec">${esc(f.sec)}</div>`; return; }
+    html += `<div class="frow"><label>${esc(f.label)}${f.req?' <span class="req">＊</span>':""}</label>${fieldInput(f, data[f.k])}</div>`;
+  });
+  html += `<div class="formBtns">`;
+  if (id) html += `<button class="btn danger" id="formDelete">削除</button>`;
+  html += `<button class="btn sub" id="formCancel">キャンセル</button><button class="btn" id="formSave">保存</button></div>`;
+  openModal(html);
+
+  $("formCancel").onclick = closeModal;
+  if (id) $("formDelete").onclick = async () => {
+    if (!confirm("削除してよろしいですか？")) return;
+    await remove(colName, id); closeModal(); toast("削除しました");
+  };
+  $("formSave").onclick = async () => {
+    const out = {};
+    for (const f of fields){
+      if (f.sec) continue;
+      if (f.type === "communities"){
+        out[f.k] = Array.from(document.querySelectorAll(`input[name="fld_${f.k}"]:checked`)).map(x=>x.value);
+      } else {
+        const el = $("fld_"+f.k);
+        out[f.k] = el ? el.value.trim() : "";
+      }
+      if (f.req && (!out[f.k] || !out[f.k].length)){ toast(`「${f.label}」は必須です`); return; }
+    }
+    try {
+      const newId = await save(colName, out, id);
+      closeModal(); toast("保存しました");
+      if (afterSave) afterSave(newId, out);
+    } catch(e){ toast("保存エラー: " + e.message); }
+  };
+}
+
+/* ============ メンバー（人物） ============ */
+$("addPersonBtn").onclick = () => openForm("メンバー追加", PERSON_FIELDS, null, "people");
+$("q").oninput = renderPeople;
+$("fIndustry").onchange = renderPeople;
+$("fCommunity").onchange = renderPeople;
+$("fSort").onchange = renderPeople;
+
+function personSearchText(p){
+  const meets = meetingsOf(p.id).map(m => (m.content||"") + " " + (m.actions||"")).join(" ");
+  const comms = (p.communityIds||[]).map(commName).join(" ");
+  return Object.values(p).filter(v=>typeof v==="string").join(" ") + " " + comms + " " + meets;
+}
+
+function renderPeople(){
+  const q = $("q").value.trim().toLowerCase();
+  const fi = $("fIndustry").value;
+  const fc = $("fCommunity").value;
+  const sort = $("fSort").value;
+
+  let list = state.people.filter(p => {
+    if (fi && p.industry !== fi) return false;
+    if (fc && !(p.communityIds||[]).includes(fc)) return false;
+    if (q && !personSearchText(p).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (sort === "kana") list.sort((a,b)=>(a.kana||a.name||"").localeCompare(b.kana||b.name||"","ja"));
+  else {
+    list.sort((a,b)=>(lastMeetingDate(b.id)||"").localeCompare(lastMeetingDate(a.id)||""));
+    if (sort === "old") list.reverse();
+  }
+
+  if (!list.length){ $("peopleList").innerHTML = `<div class="empty">該当するメンバーがいません。<br>「＋ メンバー追加」から登録してください。</div>`; }
+  else $("peopleList").innerHTML = list.map(p => {
+    const last = lastMeetingDate(p.id);
+    const days = daysSince(last);
+    const cnt = meetingsOf(p.id).length;
+    let badge = "";
+    if (!last) badge = `<span class="badge new">1to1未実施</span>`;
+    else if (days > 90) badge = `<span class="badge warn">疎遠 ${days}日</span>`;
+    const chips = [
+      p.industry ? `<span class="chip">${esc(p.industry)}</span>` : "",
+      p.category ? `<span class="chip">${esc(p.category)}</span>` : "",
+      p.region ? `<span class="chip region">📍${esc(p.region)}</span>` : "",
+      ...(p.communityIds||[]).map(cid => commName(cid) ? `<span class="chip comm">${esc(commName(cid))}</span>` : "")
+    ].join("");
+    return `<div class="card" onclick="showPerson('${p.id}')">
+      <div style="display:flex;align-items:center;gap:8px"><span class="name">${esc(p.name)}</span>${badge}</div>
+      <div class="sub">${esc(p.company||"")}${p.title?"　"+esc(p.title):""}</div>
+      <div class="chips">${chips}</div>
+      ${p.wantedReferral ? `<div class="want">★欲しい紹介：${esc(p.wantedReferral)}</div>` : ""}
+      <div class="meta"><span>1to1：${cnt}回</span>${last?`<span>最終 ${fmtDate(last)}</span>`:""}</div>
+    </div>`;
+  }).join("");
+
+  // フィルタの選択肢を更新
+  const inds = [...new Set(state.people.map(p=>p.industry).filter(Boolean))].sort();
+  keepSelect($("fIndustry"), inds, "業種：すべて");
+  keepSelect($("fCommunity"), state.communities.map(c=>({v:c.id, t:c.name})), "交流会：すべて");
+}
+
+function keepSelect(sel, items, allLabel){
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${allLabel}</option>` + items.map(it => {
+    const v = typeof it === "string" ? it : it.v;
+    const t = typeof it === "string" ? it : it.t;
+    return `<option value="${esc(v)}">${esc(t)}</option>`;
+  }).join("");
+  sel.value = cur;
+}
+
+function showPerson(pid){
+  const p = state.people.find(x=>x.id===pid); if (!p) return;
+  const rows = PERSON_FIELDS.filter(f=>!f.sec && f.k!=="name").map(f => {
+    let v = p[f.k];
+    if (f.k === "communityIds") v = (v||[]).map(commName).filter(Boolean).join("、");
+    if (!v) return "";
+    if (f.k === "meishiUrl" || f.k === "web") v = `<a href="${esc(v)}" target="_blank" onclick="event.stopPropagation()">${esc(v)}</a>`;
+    else v = esc(v);
+    return `<dl class="dl"><dt>${esc(f.label)}</dt><dd>${v}</dd></dl>`;
+  }).join("");
+
+  const meets = meetingsOf(pid).map(m => `
+    <div class="subcard" onclick="editMeeting('${m.id}')">
+      <div class="h">${fmtDate(m.date)}　${esc(m.format||"")}${m.place?"＠"+esc(m.place):""}</div>
+      <div>${esc((m.content||"").slice(0,100))}${(m.content||"").length>100?"…":""}</div>
+      ${m.actions?`<div style="color:var(--warn)">▶ ${esc(m.actions)}</div>`:""}
+    </div>`).join("") || `<div style="font-size:13px;color:var(--sub)">まだ1to1の記録がありません</div>`;
+
+  const refs = state.referrals.filter(r=>r.personId===pid).sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(r => `
+    <div class="subcard" onclick="editReferral('${r.id}')">
+      <div class="h">${esc(r.direction||"")}　${fmtDate(r.date)}　${esc(r.status||"")}</div>
+      <div>${esc(r.counterpart||"")} ${esc(r.content||"")}</div>
+    </div>`).join("") || `<div style="font-size:13px;color:var(--sub)">リファーラル記録なし</div>`;
+
+  openModal(`
+    <h2>${esc(p.name)}${p.kana?`<span style="font-size:12px;color:var(--sub)">（${esc(p.kana)}）</span>`:""}</h2>
+    <div class="formBtns" style="justify-content:flex-start;margin:0 0 12px">
+      <button class="btn small" onclick="addMeetingFor('${pid}')">＋ 1to1を記録</button>
+      <button class="btn small sub" onclick="addReferralFor('${pid}')">＋ リファーラル</button>
+      <button class="btn small sub" onclick="editPerson('${pid}')">✏️ 編集</button>
+    </div>
+    ${rows}
+    <div class="fsec">1to1の履歴（${meetingsOf(pid).length}回）</div>${meets}
+    <div class="fsec">リファーラル</div>${refs}
+  `);
+}
+function editPerson(pid){ const p = state.people.find(x=>x.id===pid); openForm("メンバー編集", PERSON_FIELDS, p, "people", pid); }
+function addMeetingFor(pid){ openForm("1to1を記録", MEETING_FIELDS, {personId:pid, date:today()}, "meetings"); }
+function addReferralFor(pid){ openForm("リファーラル記録", REFERRAL_FIELDS, {personId:pid, date:today()}, "referrals"); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+/* ============ 1to1記録 ============ */
+$("addMeetingBtn").onclick = () => openForm("1to1を記録", MEETING_FIELDS, {date:today()}, "meetings");
+$("qMeet").oninput = renderMeetings;
+
+function renderMeetings(){
+  const q = $("qMeet").value.trim().toLowerCase();
+  let list = state.meetings.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if (q) list = list.filter(m => (Object.values(m).filter(v=>typeof v==="string").join(" ") + personName(m.personId)).toLowerCase().includes(q));
+  $("meetingList").innerHTML = list.map(m => `
+    <div class="card" onclick="editMeeting('${m.id}')">
+      <div class="name" style="font-size:14px">${fmtDate(m.date)}　${esc(personName(m.personId))}</div>
+      <div class="sub">${esc(m.format||"")}${m.place?"＠"+esc(m.place):""}${m.time?"　"+esc(m.time):""}</div>
+      <div style="font-size:13px;margin-top:4px">${esc((m.content||"").slice(0,120))}${(m.content||"").length>120?"…":""}</div>
+      ${m.actions?`<div style="font-size:12px;color:var(--warn);margin-top:4px">▶ ${esc(m.actions)}</div>`:""}
+      ${m.nextDate?`<div class="meta">次回予定：${fmtDate(m.nextDate)}</div>`:""}
+    </div>`).join("") || `<div class="empty">1to1の記録がまだありません。</div>`;
+}
+function editMeeting(id){ const m = state.meetings.find(x=>x.id===id); openForm("1to1記録の編集", MEETING_FIELDS, m, "meetings", id); }
+
+/* ============ リファーラル ============ */
+$("addReferralBtn").onclick = () => openForm("リファーラル記録", REFERRAL_FIELDS, {date:today()}, "referrals");
+$("fRefDir").onchange = renderReferrals;
+$("fRefStatus").onchange = renderReferrals;
+
+function renderReferrals(){
+  const fd = $("fRefDir").value, fs = $("fRefStatus").value;
+  let list = state.referrals.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  if (fd) list = list.filter(r=>r.direction===fd);
+  if (fs) list = list.filter(r=>r.status===fs);
+  $("referralList").innerHTML = list.map(r => `
+    <div class="card" onclick="editReferral('${r.id}')">
+      <div class="name" style="font-size:14px">${r.direction==="出した"?"📤 出した":"📥 もらった"}　${esc(personName(r.personId))}</div>
+      <div class="sub">${fmtDate(r.date)}　${esc(r.status||"")}${r.amount?"　¥"+Number(r.amount).toLocaleString():""}</div>
+      <div style="font-size:13px;margin-top:4px">${esc(r.counterpart||"")} ${esc(r.content||"")}</div>
+    </div>`).join("") || `<div class="empty">リファーラルの記録がまだありません。</div>`;
+}
+function editReferral(id){ const r = state.referrals.find(x=>x.id===id); openForm("リファーラル編集", REFERRAL_FIELDS, r, "referrals", id); }
+
+/* ============ 交流会マスタ ============ */
+$("addCommunityBtn").onclick = () => openForm("交流会を追加", COMMUNITY_FIELDS, {type:"BNI"}, "communities");
+
+function renderCommunities(){
+  const memberCount = cid => state.people.filter(p=>(p.communityIds||[]).includes(cid)).length;
+  $("communityList").innerHTML = state.communities.slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"","ja")).map(c => `
+    <div class="card" onclick="editCommunity('${c.id}')">
+      <div class="name" style="font-size:15px">${c.type==="BNI"?"🐝":"🏛️"} ${esc(c.name)}</div>
+      <div class="chips">
+        ${c.type?`<span class="chip">${esc(c.type)}</span>`:""}
+        ${c.region?`<span class="chip comm">${esc(c.region)}</span>`:""}
+        ${c.area?`<span class="chip region">📍${esc(c.area)}</span>`:""}
+      </div>
+      <div class="meta">登録メンバー：${memberCount(c.id)}名</div>
+    </div>`).join("") || `<div class="empty">交流会が未登録です。<br>まず「BNI BeBeeチャプター」などを登録しましょう。</div>`;
+}
+function editCommunity(id){ const c = state.communities.find(x=>x.id===id); openForm("交流会の編集", COMMUNITY_FIELDS, c, "communities", id); }
+
+/* ============ エクスポート ============ */
+$("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "1to1-backup-" + today() + ".json";
+  a.click();
+  toast("バックアップをダウンロードしました");
+};
+
+/* ============ 描画 ============ */
+function renderAll(){
+  renderPeople(); renderMeetings(); renderReferrals(); renderCommunities();
+}
+$("industryList").innerHTML = INDUSTRIES.map(i=>`<option value="${i}">`).join("");
+</script>
+</body>
+</html>
