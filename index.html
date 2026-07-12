@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="1to1ノート">
+<meta name="theme-color" content="#8b1d2c">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <title>1to1ノート</title>
 <style>
   :root{
@@ -76,7 +81,7 @@
 <body>
 
 <header>
-  <h1>🤝 1to1ノート <span style="font-size:10px;opacity:.65;font-weight:normal">v3</span></h1>
+  <h1>🤝 1to1ノート <span style="font-size:10px;opacity:.65;font-weight:normal">v4</span></h1>
   <span class="user" id="userLabel"></span>
   <button id="exportBtn" style="display:none">保存(JSON)</button>
   <button id="logoutBtn" style="display:none">ログアウト</button>
@@ -257,7 +262,15 @@ function toast(msg){
 
 /* ============ 認証 ============ */
 $("loginBtn").onclick = () => {
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => toast("ログインエラー: " + e.message));
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => {
+    // ホーム画面起動などでポップアップが使えない環境ではリダイレクト方式に切り替える
+    if (["auth/popup-blocked","auth/popup-closed-by-user","auth/operation-not-supported-in-this-environment","auth/cancelled-popup-request"].includes(e.code)) {
+      auth.signInWithRedirect(provider).catch(e2 => toast("ログインエラー: " + e2.message));
+    } else {
+      toast("ログインエラー: " + e.message);
+    }
+  });
 };
 $("logoutBtn").onclick = () => auth.signOut();
 
